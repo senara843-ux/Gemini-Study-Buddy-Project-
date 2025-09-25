@@ -1,15 +1,33 @@
 import os
-from dotenv import load_dotenv
 from google import genai
+import streamlit as st # Import Streamlit for secrets management
 
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
+# --- API Key Handling: Designed for Local Development AND Streamlit Cloud ---
+API_KEY = None
 
+# 1. Try to get the key from Streamlit Cloud Secrets (Deployment)
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"] 
+except (AttributeError, KeyError):
+    # 2. Fall back to os.getenv for local development (reading the .env file)
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        API_KEY = os.getenv("GEMINI_API_KEY")
+    except ImportError:
+        # Fails if python-dotenv is not installed
+        pass
+
+# Final check to ensure the key was found
 if not API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in .env file.")
+    # This error will be raised if the key is missing in BOTH places.
+    raise ValueError("API Key is missing. Please ensure GEMINI_API_KEY is set in your local .env file or Streamlit Cloud Secrets.")
 
+# Initialize the Gemini Client
 client = genai.Client(api_key=API_KEY)
 MODEL = "gemini-2.5-flash"
+
+# --- Core Functions ---
 
 def summarize_notes(notes_text):
     """Generates a key bullet-point summary and study tips from the provided notes."""
